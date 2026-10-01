@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lovelu Sir's G.M.A. Portal</title>
+  
+  <!-- Bangla Default Font (Hind Siliguri) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body, button, input, select, textarea {
+      font-family: 'Hind Siliguri', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+  </style>
+</head>
+<body class="bg-[#F7F2EF] text-stone-900 min-h-screen relative selection:bg-stone-900 selection:text-white overflow-x-hidden">
+
+  <!-- MOBILE TOP HEADER (Hidden on PC View) -->
+  <header class="md:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b-2 border-stone-300 px-4 py-3.5 flex items-center justify-between shadow-xs">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar(true)" class="p-2 rounded-xl bg-stone-100 border-2 border-stone-300 text-stone-900 hover:bg-stone-200 transition" aria-label="Open Menu">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+
+      <!-- Logo + Title (Mobile Header) -->
+      <div onclick="goHome()" class="cursor-pointer flex items-center gap-2.5">
+        <img src="channels4_profile.jpg" alt="Lovelu Sir" class="w-9 h-9 rounded-full object-cover border-2 border-stone-400 shrink-0 shadow-2xs" />
+        <div>
+          <h1 class="text-xs font-bold text-stone-900 tracking-tight leading-tight" data-i18n="loveluSirs">Lovelu Sir's</h1>
+          <p class="text-[10px] text-stone-600 font-semibold uppercase tracking-wider" data-i18n="gmaPortal">G.M.A. Portal</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- YouTube Auto-Sub Confirmation Link -->
+      <a href="https://www.youtube.com/@IftekharAlamlovelu?sub_confirmation=1" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs rounded-xl transition shadow-2xs flex items-center gap-1 border-2 border-red-700">
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        <span>Subscribe</span>
+      </a>
+
+      <button onclick="openEnrollModal()" class="px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs rounded-xl transition shadow-2xs flex items-center gap-1 border-2 border-stone-900">
+        <span>⭐</span>
+        <span data-i18n="enroll">Enroll</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MOBILE SLIDE-OUT DRAWER & BACKDROP -->
+  <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-stone-900/40 backdrop-blur-xs z-50 opacity-0 pointer-events-none transition-opacity duration-300 md:hidden"></div>
+
+  <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-72 bg-white border-r-2 border-stone-300 z-50 -translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-between p-5 md:hidden shadow-2xl">
+    <div>
+      <!-- Drawer Header with Logo -->
+      <div class="flex items-center justify-between pb-4 mb-4 border-b-2 border-stone-200">
+        <div onclick="goHome(); toggleSidebar(false);" class="flex items-center gap-2.5 cursor-pointer">
+          <img src="channels4_profile.jpg" alt="Lovelu Sir" class="w-10 h-10 rounded-full object-cover border-2 border-stone-400 shrink-0 shadow-2xs" />
+          <div>
+            <h2 class="text-xs font-bold text-stone-900 leading-tight" data-i18n="loveluSirs">Lovelu Sir's</h2>
+            <p class="text-[10px] text-stone-600 font-semibold uppercase tracking-wider" data-i18n="gmaPortal">G.M.A. Portal</p>
+          </div>
+        </div>
+        <button onclick="toggleSidebar(false)" class="p-2 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition">
+          ✕
+        </button>
+      </div>
+
+      <!-- YouTube Subscribe Link (Mobile Drawer) -->
+      <a href="https://www.youtube.com/@IftekharAlamlovelu?sub_confirmation=1" target="_blank" rel="noopener noreferrer" class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition bg-red-600 hover:bg-red-700 text-white border-2 border-red-700 mb-2.5 shadow-2xs">
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        <span data-i18n="youtubeSub">Subscribe YouTube Channel</span>
+      </a>
+
+      <!-- Language Toggle (Mobile) -->
+      <button onclick="toggleLanguage()" class="w-full flex items-center justify-center px-3.5 py-2 rounded-xl text-xs font-bold transition bg-stone-100 text-stone-800 hover:bg-stone-200 border-2 border-stone-300 mb-4 shadow-2xs">
+        🌐 <span id="mobile-lang-text" class="ml-2" data-i18n="switchLang">English-এ দেখুন</span>
+      </button>
+
+      <div class="space-y-1.5">
+        <button onclick="goHome(); toggleSidebar(false);" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-800 hover:bg-stone-100 transition border-2 border-transparent">
+          <span class="text-stone-500">🏠</span>
+          <span data-i18n="homeAll">Home (All Classes)</span>
+        </button>
+
+        <button onclick="openEnrollModal(); toggleSidebar(false);" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-stone-50 text-stone-900 border-2 border-stone-300 hover:bg-stone-100 transition shadow-2xs">
+          <div class="flex items-center gap-3">
+            <span>⭐</span>
+            <span data-i18n="buyEnroll">Buy / Enroll Courses</span>
+          </div>
+          <span class="text-[9px] bg-stone-200 text-stone-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border border-stone-300" data-i18n="paid">Paid</span>
+        </button>
+
+        <div class="pt-5 pb-2 text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1" data-i18n="academicBatches">Academic Batches</div>
+
+        <button onclick="selectYear('Freshman'); toggleSidebar(false);" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 hover:bg-stone-100 transition border-2 border-transparent">
+          <span>🎓</span> <span data-i18n="freshman">Freshman Year</span>
+        </button>
+        <button onclick="selectYear('Sophomore'); toggleSidebar(false);" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 hover:bg-stone-100 transition border-2 border-transparent">
+          <span>📚</span> <span data-i18n="sophomore">Sophomore Year</span>
+        </button>
+        <button onclick="selectYear('Junior'); toggleSidebar(false);" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 hover:bg-stone-100 transition border-2 border-transparent">
+          <span>🏫</span> <span data-i18n="junior">Junior Year</span>
+        </button>
+        <button onclick="selectYear('Senior'); toggleSidebar(false);" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-stone-700 hover:bg-stone-100 transition border-2 border-transparent">
+          <span>🏆</span> <span data-i18n="senior">Senior Year</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Drawer Footer -->
+    <div class="pt-4 border-t-2 border-stone-200 text-xs text-stone-600 text-center font-medium">
+      <span data-i18n="createdBy">Created by</span> <a href="https://sites.google.com/view/mdshahriarsifat" target="_blank" rel="noopener noreferrer" class="text-stone-900 font-bold hover:underline">Md Shahriar Sifat</a>
+    </div>
+  </aside>
+
+  <!-- LAYOUT WRAPPER (Desktop Sidebar + Main Content) -->
+  <div class="min-h-screen flex flex-col md:flex-row">
+    
+    <!-- PERMANENT DESKTOP LEFT SIDEBAR (PC View Only) -->
+    <aside class="hidden md:flex flex-col w-72 bg-white border-r-2 border-stone-300 p-6 shrink-0 sticky top-0 h-screen justify-between shadow-xs">
+      <div>
+        <!-- Logo + Title (Desktop Sidebar) -->
+        <div onclick="goHome()" class="mb-6 cursor-pointer group flex items-center gap-3.5">
+          <img src="channels4_profile.jpg" alt="Lovelu Sir" class="w-11 h-11 rounded-full object-cover border-2 border-stone-400 shrink-0 shadow-2xs group-hover:border-stone-600 transition" />
+          <div>
+            <h2 class="text-sm font-bold text-stone-900 tracking-tight group-hover:text-stone-700 transition leading-tight" data-i18n="loveluSirs">Lovelu Sir's</h2>
+            <p class="text-[11px] font-semibold text-stone-600 uppercase tracking-wider" data-i18n="gmaPortal">G.M.A. Portal</p>
+          </div>
+        </div>
+
+        <!-- YouTube Subscribe Link (Desktop Sidebar) -->
+        <a href="https://www.youtube.com/@IftekharAlamlovelu?sub_confirmation=1" target="_blank" rel="noopener noreferrer" class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition bg-red-600 hover:bg-red-700 text-white border-2 border-red-700 mb-2.5 shadow-2xs">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          <span data-i18n="youtubeSub">Subscribe YouTube Channel</span>
+        </a>
+
+        <!-- Language Toggle (Desktop) -->
+        <button onclick="toggleLanguage()" class="w-full flex items-center justify-center px-3.5 py-2 rounded-xl text-xs font-bold transition bg-stone-100 text-stone-800 hover:bg-stone-200 border-2 border-stone-300 mb-6 shadow-2xs">
+          🌐 <span id="desktop-lang-text" class="ml-2" data-i18n="switchLang">English-এ দেখুন</span>
+        </button>
+
+        <div class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2.5 px-1" data-i18n="nav">Navigation</div>
+
+        <!-- Home Button -->
+        <button id="desktop-home-btn" onclick="goHome()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold mb-2 transition bg-stone-900 text-white border-2 border-stone-900 shadow-2xs">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span data-i18n="homeAll">Home (All Classes)</span>
+        </button>
+
+        <!-- Enroll Courses Button -->
+        <button onclick="openEnrollModal()" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold mb-6 transition bg-stone-50 text-stone-900 border-2 border-stone-300 hover:bg-stone-100 shadow-2xs">
+          <div class="flex items-center gap-2">
+            <span>⭐</span>
+            <span data-i18n="buyEnroll">Enroll Courses</span>
+          </div>
+          <span class="text-[9px] bg-stone-200 text-stone-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border border-stone-300" data-i18n="paid">Paid</span>
+        </button>
+
+        <div class="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2.5 px-1" data-i18n="academicYears">Academic Years</div>
+
+        <nav class="space-y-1.5" id="desktop-nav">
+          <!-- Populated by JS -->
+        </nav>
+      </div>
+
+      <!-- Desktop Sidebar Footer -->
+      <div class="pt-4 border-t-2 border-stone-200 text-xs text-stone-600 font-medium">
+        <span data-i18n="createdBy">Created by</span> <a href="https://sites.google.com/view/mdshahriarsifat" target="_blank" rel="noopener noreferrer" class="text-stone-900 font-bold hover:underline">Md Shahriar Sifat</a>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 p-4 md:p-10 max-w-6xl pb-28 md:pb-12">
+      
+      <!-- Top Banner with Thick Border -->
+      <div class="bg-white border-2 border-stone-300 rounded-2xl p-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 shadow-2xs relative overflow-hidden">
+        <div class="relative z-10">
+          <span class="inline-block px-2.5 py-1 bg-stone-100 border-2 border-stone-300 text-stone-800 text-[10px] font-bold uppercase tracking-wider rounded-xl mb-2" data-i18n="badge">Honors Mathematics Major & Non-Major</span>
+          <h2 class="text-xl sm:text-2xl font-bold text-stone-900 tracking-tight" data-i18n="welcome">Welcome to Lovelu Sir's G.M.A. Portal</h2>
+          <p class="text-xs sm:text-sm text-stone-700 font-medium mt-1 max-w-xl" data-i18n="desc">Access live lectures, structured subject notes, comprehensive class sheets, and flagship preparation courses.</p>
+        </div>
+        
+        <div class="flex flex-wrap items-center gap-2.5 self-start sm:self-auto relative z-10">
+          <button onclick="openEnrollModal()" class="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs rounded-xl transition shrink-0 shadow-2xs border-2 border-stone-900" data-i18n="explore">
+            Explore Batches →
+          </button>
+          
+          <a href="https://www.youtube.com/@IftekharAlamlovelu?sub_confirmation=1" target="_blank" rel="noopener noreferrer" class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition shrink-0 shadow-2xs border-2 border-red-700 flex items-center gap-2">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            <span data-i18n="subYoutube">Subscribe Channel</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- SECTION CONTROLS BAR -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div id="subject-container" class="flex flex-wrap gap-2"></div>
+        
+        <!-- Total Video Count Badge -->
+        <div class="self-end sm:self-auto px-4 py-2 bg-white border-2 border-stone-300 rounded-xl text-xs font-bold text-stone-900 flex items-center gap-2 shadow-2xs">
+          <span class="text-stone-600">📹</span>
+          <span id="video-count-text">0 Videos</span>
+        </div>
+      </div>
+
+      <!-- CLASS GRID -->
+      <div id="classes-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl border-2 border-stone-300 p-12 text-center col-span-2 shadow-2xs">
+          <p class="text-stone-500 text-sm font-medium" data-i18n="loading">Loading academic lectures...</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MOBILE BOTTOM NAVIGATION BAR -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t-2 border-stone-300 z-30 px-2 py-2 flex justify-around items-center shadow-lg" id="mobile-nav">
+    <!-- Populated by JS -->
+  </nav>
+
+  <!-- BUY / ENROLL COURSES MODAL -->
+  <div id="enroll-modal" class="fixed inset-0 z-50 bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-white border-2 border-stone-300 rounded-2xl max-w-md w-full p-6 sm:p-7 relative shadow-2xl scale-95 transition-transform duration-300" id="enroll-modal-content">
+      <button onclick="closeEnrollModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-100 border-2 border-stone-300 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-200 transition text-sm font-bold">✕</button>
+      
+      <div class="flex items-center gap-3.5 mb-5">
+        <div class="w-11 h-11 rounded-2xl bg-stone-50 border-2 border-stone-300 text-stone-900 flex items-center justify-center font-bold text-xl shrink-0 shadow-2xs">⭐</div>
+        <div>
+          <h3 class="text-base font-bold text-stone-900 tracking-tight leading-snug" data-i18n="enrollTitle">Enroll in Flagship Courses</h3>
+          <p class="text-xs text-stone-600 font-medium mt-0.5" data-i18n="enrollDesc">Join Lovelu Sir's Premium Live Batches for Honors Mathematics.</p>
+        </div>
+      </div>
+
+      <div class="space-y-2.5 my-4 text-xs">
+        <div class="p-3.5 bg-stone-50/70 rounded-xl border-2 border-stone-300 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-stone-900 text-sm">🎓 <span data-i18n="freshman">Freshman Year</span></div>
+            <p class="text-stone-600 font-medium text-[11px] mt-0.5"><span data-i18n="session">Session</span> 2025-26</p>
+          </div>
+          <span class="text-[10px] bg-stone-200 text-stone-900 font-bold px-2 py-0.5 rounded border border-stone-300" data-i18n="active">Active</span>
+        </div>
+
+        <div class="p-3.5 bg-stone-50/70 rounded-xl border-2 border-stone-300 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-stone-900 text-sm">📚 <span data-i18n="sophomore">Sophomore Year</span></div>
+            <p class="text-stone-600 font-medium text-[11px] mt-0.5"><span data-i18n="session">Session</span> 2024-25</p>
+          </div>
+          <span class="text-[10px] bg-stone-200 text-stone-900 font-bold px-2 py-0.5 rounded border border-stone-300" data-i18n="active">Active</span>
+        </div>
+
+        <div class="p-3.5 bg-stone-50/70 rounded-xl border-2 border-stone-300 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-stone-900 text-sm">🏫 <span data-i18n="junior">Junior Year</span></div>
+            <p class="text-stone-600 font-medium text-[11px] mt-0.5"><span data-i18n="session">Session</span> 2023-24</p>
+          </div>
+          <span class="text-[10px] bg-stone-200 text-stone-900 font-bold px-2 py-0.5 rounded border border-stone-300" data-i18n="active">Active</span>
+        </div>
+
+        <div class="p-3.5 bg-stone-50/70 rounded-xl border-2 border-stone-300 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-stone-900 text-sm">🏆 <span data-i18n="senior">Senior Year</span></div>
+            <p class="text-stone-600 font-medium text-[11px] mt-0.5"><span data-i18n="session">Session</span> 2022-2023</p>
+          </div>
+          <span class="text-[10px] bg-stone-200 text-stone-900 font-bold px-2 py-0.5 rounded border border-stone-300" data-i18n="active">Active</span>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t-2 border-stone-200 flex flex-col gap-2.5">
+        <a href="https://wa.me/8801988653524" target="_blank" rel="noopener noreferrer" class="w-full py-3 bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs rounded-xl text-center transition flex items-center justify-center gap-2 shadow-2xs border-2 border-stone-900">
+          <span class="text-base">💬</span>
+          <span data-i18n="contactWa">Contact on WhatsApp to Enroll</span>
+        </a>
+        <button onclick="closeEnrollModal()" class="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold text-xs rounded-xl transition border-2 border-stone-300" data-i18n="closeWin">
+          Close Window
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- TRANSLATION DICTIONARY ---
+    const translations = {
+      en: {
+        loveluSirs: "Lovelu Sir's",
+        gmaPortal: "G.M.A. Portal",
+        enroll: "Enroll",
+        homeAll: "Home (All Classes)",
+        buyEnroll: "Buy / Enroll Courses",
+        paid: "Paid",
+        academicBatches: "Academic Batches",
+        freshman: "Freshman Year",
+        sophomore: "Sophomore Year",
+        junior: "Junior Year",
+        senior: "Senior Year",
+        nav: "Navigation",
+        academicYears: "Academic Years",
+        badge: "Honors Mathematics Major & Non-Major",
+        welcome: "Welcome to Lovelu Sir's G.M.A. Portal",
+        desc: "Access live lectures, structured subject notes, comprehensive class sheets, and flagship preparation courses.",
+        explore: "Explore Batches →",
+        loading: "Loading academic lectures...",
+        allSubjects: "All Subjects",
+        noLectures: "No lectures found matching this category.",
+        downloadPdf: "Download Class Notes (PDF)",
+        noNotes: "📄 Notes: Not attached yet",
+        academy: "Lovelu Sir's Academy",
+        createdBy: "Created by",
+        enrollTitle: "Enroll in Flagship Courses",
+        enrollDesc: "Join Lovelu Sir's Premium Live Batches for Honors Mathematics.",
+        session: "Session",
+        active: "Active",
+        contactWa: "Contact on WhatsApp to Enroll",
+        closeWin: "Close Window",
+        videoCount: "Videos",
+        videoCountSingular: "Video",
+        switchLang: "বাংলায় দেখুন",
+        youtubeSub: "Subscribe YouTube Channel",
+        subYoutube: "Subscribe Channel"
+      },
+      bn: {
+        loveluSirs: "লাভলু স্যারের",
+        gmaPortal: "জি.এম.এ. পোর্টাল",
+        enroll: "ভর্তি হোন",
+        homeAll: "হোম (সকল ক্লাস)",
+        buyEnroll: "কোর্স কিনুন / ভর্তি হোন",
+        paid: "পেইড",
+        academicBatches: "একাডেমিক ব্যাচ",
+        freshman: "প্রথম বর্ষ",
+        sophomore: "দ্বিতীয় বর্ষ",
+        junior: "তৃতীয় বর্ষ",
+        senior: "চতুর্থ বর্ষ",
+        nav: "মেনু (Navigation)",
+        academicYears: "শিক্ষাবর্ষ",
+        badge: "অনার্স গণিত মেজর ও নন-মেজর",
+        welcome: "লাভলু স্যারের জি.এম.এ. পোর্টালে স্বাগতম",
+        desc: "লাইভ লেকচার, সাজানো নোট, ক্লাস শিট এবং স্পেশাল কোর্স সমূহ এক্সেস করুন।",
+        explore: "ব্যাচগুলো দেখুন →",
+        loading: "একাডেমিক লেকচার লোড হচ্ছে...",
+        allSubjects: "সকল বিষয় (All Subjects)",
+        noLectures: "এই ক্যাটাগরিতে কোন লেকচার পাওয়া যায়নি।",
+        downloadPdf: "ক্লাস নোট ডাউনলোড করুন (PDF)",
+        noNotes: "📄 নোটঃ এখনও যুক্ত করা হয়নি",
+        academy: "লাভলু স্যারের একাডেমি",
+        createdBy: "তৈরি করেছেন",
+        enrollTitle: "ফ্ল্যাগশিপ কোর্সে ভর্তি হোন",
+        enrollDesc: "অনার্স গণিতের জন্য লাভলু স্যারের প্রিমিয়াম লাইভ ব্যাচে যুক্ত হোন।",
+        session: "সেশন",
+        active: "চলমান",
+        contactWa: "ভর্তি হতে হোয়াটসঅ্যাপে যোগাযোগ করুন",
+        closeWin: "উইন্ডো বন্ধ করুন",
+        videoCount: "টি ভিডিও",
+        videoCountSingular: "টি ভিডিও",
+        switchLang: "View in English",
+        youtubeSub: "ইউটিউব চ্যানেল সাবস্ক্রাইব করুন",
+        subYoutube: "চ্যানেল সাবস্ক্রাইব করুন"
+      }
+    };
+
+    // Default to Bangla language & Bangla font
+    let currentLang = localStorage.getItem('gma_lang') || 'bn';
+
+    function toggleLanguage() {
+      currentLang = currentLang === 'en' ? 'bn' : 'en';
+      localStorage.setItem('gma_lang', currentLang);
+      applyTranslations();
+    }
+
+    function t(key) {
+      return translations[currentLang][key] || key;
+    }
+
+    function applyTranslations() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[currentLang][key]) {
+          el.innerText = translations[currentLang][key];
+        }
+      });
+      renderNavigation();
+      updateSubjectTabs();
+      if(allClasses.length > 0) renderClasses();
+    }
+
+    // --- FIREBASE SETUP ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCxh2kHzMZd3so7btCCWBCsxMgXTm0sLno",
+      authDomain: "gma-lovelusir.firebaseapp.com",
+      projectId: "gma-lovelusir",
+      storageBucket: "gma-lovelusir.firebasestorage.app",
+      messagingSenderId: "810643308275",
+      appId: "1:810643308275:web:04304abc053eefbbe78186",
+      measurementId: "G-2TST208R1Q"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let allClasses = [];
+    let selectedYear = 'All';
+    let selectedSubject = 'All';
+
+    const yearsList = [
+      { id: 'Freshman', translationKey: 'freshman', icon: '<path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>' },
+      { id: 'Sophomore', translationKey: 'sophomore', icon: '<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>' },
+      { id: 'Junior', translationKey: 'junior', icon: '<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>' },
+      { id: 'Senior', translationKey: 'senior', icon: '<path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>' }
+    ];
+
+    db.collection("classes").orderBy("date", "desc").onSnapshot((snapshot) => {
+      allClasses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderNavigation();
+      updateSubjectTabs();
+      renderClasses();
+    });
+
+    function toggleSidebar(open) {
+      const drawer = document.getElementById("sidebar-drawer");
+      const backdrop = document.getElementById("sidebar-backdrop");
+      if (open) {
+        backdrop.classList.remove("opacity-0", "pointer-events-none");
+        drawer.classList.remove("-translate-x-full");
+      } else {
+        backdrop.classList.add("opacity-0", "pointer-events-none");
+        drawer.classList.add("-translate-x-full");
+      }
+    }
+
+    function openEnrollModal() {
+      const modal = document.getElementById("enroll-modal");
+      const content = document.getElementById("enroll-modal-content");
+      modal.classList.remove("opacity-0", "pointer-events-none");
+      setTimeout(() => content.classList.remove("scale-95"), 10);
+    }
+
+    function closeEnrollModal() {
+      const modal = document.getElementById("enroll-modal");
+      const content = document.getElementById("enroll-modal-content");
+      content.classList.add("scale-95");
+      setTimeout(() => modal.classList.add("opacity-0", "pointer-events-none"), 200);
+    }
+
+    function goHome() {
+      selectedYear = 'All';
+      selectedSubject = 'All';
+      renderNavigation();
+      updateSubjectTabs();
+      renderClasses();
+    }
+
+    function selectYear(year) {
+      selectedYear = year;
+      selectedSubject = 'All';
+      renderNavigation();
+      updateSubjectTabs();
+      renderClasses();
+    }
+
+    function selectSubject(subject) {
+      selectedSubject = subject;
+      updateSubjectTabs();
+      renderClasses();
+    }
+
+    function renderNavigation() {
+      const homeBtn = document.getElementById("desktop-home-btn");
+      if (homeBtn) {
+        if (selectedYear === 'All') {
+          homeBtn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold mb-2 transition bg-stone-900 text-white border-2 border-stone-900 shadow-2xs";
+        } else {
+          homeBtn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold mb-2 transition text-stone-700 hover:bg-stone-100 hover:text-stone-900 border-2 border-transparent hover:border-stone-300";
+        }
+      }
+
+      const desktopNav = document.getElementById("desktop-nav");
+      if (desktopNav) {
+        desktopNav.innerHTML = yearsList.map(item => {
+          const isActive = selectedYear === item.id;
+          return `
+            <button onclick="selectYear('${item.id}')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${isActive ? 'bg-stone-900 text-white border-2 border-stone-900 shadow-2xs' : 'text-stone-700 hover:bg-stone-100 hover:text-stone-900 border-2 border-transparent hover:border-stone-300'}">
+              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${item.icon}</svg>
+              <span>${t(item.translationKey)}</span>
+            </button>
+          `;
+        }).join('');
+      }
+
+      const mobileNav = document.getElementById("mobile-nav");
+      if (mobileNav) {
+        mobileNav.innerHTML = yearsList.map(item => {
+          const isActive = selectedYear === item.id;
+          return `
+            <button onclick="selectYear('${item.id}')" class="flex flex-col items-center justify-center flex-1 py-1 transition ${isActive ? 'text-stone-900 font-bold' : 'text-stone-400 hover:text-stone-600'}">
+              <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="${isActive ? '2.5' : '1.8'}" viewBox="0 0 24 24">${item.icon}</svg>
+              <span class="text-[10px] tracking-tight text-center">${t(item.translationKey)}</span>
+            </button>
+          `;
+        }).join('');
+      }
+    }
+
+    function updateSubjectTabs() {
+      const container = document.getElementById("subject-container");
+      if (selectedYear === 'All') {
+        container.classList.add("hidden");
+        return;
+      }
+
+      const yearClasses = allClasses.filter(c => {
+        const itemYear = (c.year || c.subgroup || '').toLowerCase();
+        return itemYear.includes(selectedYear.toLowerCase()) || (selectedYear === 'Freshman' && (itemYear.includes('freshmen') || itemYear.includes('1st')));
+      });
+      const subjects = [...new Set(yearClasses.map(c => c.subject || 'General'))];
+
+      if (subjects.length === 0 || (subjects.length === 1 && subjects[0] === 'General')) {
+        container.classList.add("hidden");
+        return;
+      }
+
+      container.classList.remove("hidden");
+      container.innerHTML = `
+        <button onclick="selectSubject('All')" class="px-3.5 py-1.5 text-xs rounded-xl font-semibold transition shadow-2xs ${selectedSubject === 'All' ? 'bg-stone-900 text-white border-2 border-stone-900 shadow-2xs' : 'bg-white border-2 border-stone-300 text-stone-800 hover:bg-stone-100'}">${t('allSubjects')}</button>
+        ${subjects.map(sub => `
+          <button onclick="selectSubject('${sub}')" class="px-3.5 py-1.5 text-xs rounded-xl font-semibold transition shadow-2xs ${selectedSubject === sub ? 'bg-stone-900 text-white border-2 border-stone-900 shadow-2xs' : 'bg-white border-2 border-stone-300 text-stone-800 hover:bg-stone-100'}">${sub}</button>
+        `).join('')}
+      `;
+    }
+
+    function renderClasses() {
+      const container = document.getElementById("classes-container");
+      container.innerHTML = "";
+
+      const filtered = allClasses.filter(c => {
+        const itemYear = (c.year || c.subgroup || '').toLowerCase();
+        const itemSubject = (c.subject || 'General').toLowerCase();
+        
+        let yearMatch = (selectedYear === 'All');
+        if (!yearMatch) {
+          if (selectedYear.toLowerCase() === 'freshman') {
+            yearMatch = itemYear.includes('freshman') || itemYear.includes('freshmen');
+          } else {
+            yearMatch = itemYear.includes(selectedYear.toLowerCase());
+          }
+        }
+
+        const subjectMatch = selectedSubject === 'All' || itemSubject.includes(selectedSubject.toLowerCase());
+        return yearMatch && subjectMatch;
+      });
+
+      const countText = document.getElementById("video-count-text");
+      if (countText) {
+        const suffix = filtered.length === 1 ? t('videoCountSingular') : t('videoCount');
+        countText.innerText = currentLang === 'bn' ? `${filtered.length} ${suffix}` : `${filtered.length} ${suffix}`;
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="bg-white rounded-2xl border-2 border-stone-300 p-12 text-center col-span-2 shadow-2xs"><p class="text-stone-500 text-sm font-medium">${t('noLectures')}</p></div>`;
+        return;
+      }
+
+      filtered.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-2xl overflow-hidden border-2 border-stone-300 shadow-2xs flex flex-col justify-between transition-all duration-300 hover:border-stone-400";
+
+        let mediaContent = '';
+        if (item.videoType === 'youtube' || (item.url && item.url.includes('youtu'))) {
+          let videoId = '';
+          if (item.url.includes('v=')) {
+            videoId = item.url.split('v=')[1].split('&')[0];
+          } else {
+            videoId = item.url.split('/').pop();
+          }
+          mediaContent = `<iframe class="w-full h-full absolute top-0 left-0" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; webkitallowfullscreen; mozallowfullscreen; allowfullscreen" allowfullscreen="true"></iframe>`;
+        } else {
+          const encodedUrl = encodeURIComponent(item.url || '');
+          mediaContent = `<iframe class="w-full h-full absolute top-0 left-0" src="https://www.facebook.com/plugins/video.php?href=${encodedUrl}&show_text=false" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; webkitallowfullscreen; mozallowfullscreen; allowfullscreen" allowfullscreen="true"></iframe>`;
+        }
+
+        let displayYear = item.year || item.subgroup || 'Sophomore';
+        let matchedKey = displayYear.toLowerCase().replace(' year', '');
+        if(translations[currentLang][matchedKey]) {
+          displayYear = translations[currentLang][matchedKey];
+        }
+
+        const pdfButton = item.pdfUrl ? `
+          <a href="${item.pdfUrl}" target="_blank" class="w-full mt-3.5 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-2xs border-2 border-stone-900">
+            <span>📄</span>
+            <span>${t('downloadPdf')}</span>
+          </a>
+        ` : `
+          <div class="w-full mt-3.5 py-2.5 px-4 bg-stone-50 text-stone-400 rounded-xl text-xs text-center border-2 border-stone-200 font-medium">
+            ${t('noNotes')}
+          </div>
+        `;
+
+        card.innerHTML = `
+          <div class="relative w-full aspect-video bg-stone-900 overflow-hidden border-b-2 border-stone-300">
+            ${mediaContent}
+          </div>
+          <div class="p-5 sm:p-6 flex-1 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2 mb-2.5">
+                <span class="text-[11px] font-mono bg-stone-100 text-stone-900 px-2 py-0.5 rounded border-2 border-stone-300 font-bold">${displayYear}</span>
+                <span class="text-[11px] font-mono bg-stone-100 text-stone-800 px-2 py-0.5 rounded border-2 border-stone-300 font-semibold">${item.subject || 'General'}</span>
+              </div>
+              <h3 class="font-bold text-base sm:text-lg text-stone-900 tracking-tight leading-snug">${item.title}</h3>
+            </div>
+
+            <div class="mt-5">
+              ${pdfButton}
+              <div class="mt-4 pt-3 border-t-2 border-stone-200 flex justify-between items-center text-[11px] text-stone-500 font-semibold">
+                <span>${t('academy')}</span>
+                <span>${item.date ? new Date(item.date).toLocaleDateString() : ''}</span>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Initialize translations & UI on page load
+    applyTranslations();
+  </script>
+</body>
+</html>
