@@ -181,8 +181,8 @@
     <!-- MAIN CONTENT AREA -->
     <main class="flex-1 p-4 md:p-10 max-w-6xl pb-28 md:pb-12">
       
-      <!-- INSTRUCTOR PROFILE & WELCOME BANNER -->
-      <div class="bg-white border-2 border-stone-300 rounded-2xl p-6 sm:p-8 mb-6 shadow-2xs relative overflow-hidden flex flex-col gap-6">
+      <!-- INSTRUCTOR PROFILE & WELCOME BANNER (Only visible on Home page) -->
+      <div id="home-banner" class="bg-white border-2 border-stone-300 rounded-2xl p-6 sm:p-8 mb-6 shadow-2xs relative overflow-hidden flex flex-col gap-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
           
           <!-- Instructor Info & Bio -->
@@ -405,7 +405,7 @@
         tagline: "গ্রেডিয়েন্টের পথে হাঁটুন: গণিতে দক্ষতার সর্বোচ্চ শিখরের দিকে।",
         instructorName: "মোঃ ইফতেখার আলম লাভলু",
         instructorTitle: "প্রভাষক (গণিত), রাঙ্গুনিয়া সরকারি কলেজ | পরিচালক, গ্রেডিয়েন্ট ম্যাথমেটিক্স একাডেমি (জি.এম.এ.)",
-        instructorBio: "মোঃ ইফতেখার আলম লাভলু একজন নিবেদিতপ্রাণ ও দক্ষ গণিত শিক্ষক। সরকারি কলেজের উচ্চ একাডেমিক মানের পাশাপাশি নিজের প্রতিষ্ঠা করা প্রতিষ্ঠান 'গ্রেডিয়েন্ট ম্যাথমেটিক্স একাডেমি' (জি.এম.এ.)-এর মাধ্যমে তিনি শিক্ষার্থীদের গণিতের কঠিন বিষয়গুলোকে সহজবোধ্য ও আকর্ষণীয় করে তোলেন। নির্ভুল কৌশল ও আত্মবিশ্বাসী সমস্যা সমাধানের মাধ্যমে গণিত ভীতি দূর করতে জি.এম.এ. একটি বিশ্বস্ত ও আদর্শ শিক্ষালয় হিসেবে পরিচিত।",
+        instructorBio: "মোঃ ইফতেখার আলম লাভলু একজন নিবেদিতপ্রাণ ও দক্ষ গণিত শিক্ষক। সরকারি কলেজের উচ্চ একাডেমিক মানের পাশাপাশি নিজের প্রতিষ্ঠা করা প্রতিষ্ঠান 'গ্রেডিয়েন্ট ম্যাথমেটিক্স একাডেমি' (জি.এম.এ.)-এর মাধ্যমে শিক্ষার্থীদের গণিতের কঠিন বিষয়গুলোকে সহজবোধ্য ও আকর্ষণীয় করে তোলেন। নির্ভুল কৌশল ও আত্মবিশ্বাসী সমস্যা সমাধানের মাধ্যমে গণিত ভীতি দূর করতে জি.এম.এ. একটি বিশ্বস্ত ও আদর্শ শিক্ষালয় হিসেবে পরিচিত।",
         explore: "ব্যাচগুলো দেখুন →",
         institutionsHeading: "প্রতিষ্ঠানসমূহ",
         inst1: "রাঙ্গুনিয়া সরকারি কলেজ, রাঙ্গুনিয়া, চট্টগ্রাম",
@@ -434,7 +434,6 @@
       }
     };
 
-    // Default to Bangla language & Bangla font
     let currentLang = localStorage.getItem('gma_lang') || 'bn';
 
     function toggleLanguage() {
@@ -459,7 +458,6 @@
       if(allClasses.length > 0) renderClasses();
     }
 
-    // --- FIREBASE SETUP ---
     const firebaseConfig = {
       apiKey: "AIzaSyCxh2kHzMZd3so7btCCWBCsxMgXTm0sLno",
       authDomain: "gma-lovelusir.firebaseapp.com",
@@ -517,9 +515,20 @@
       setTimeout(() => modal.classList.add("opacity-0", "pointer-events-none"), 200);
     }
 
+    function normalizeYearKey(rawYear) {
+      if (!rawYear) return 'Sophomore';
+      const lower = rawYear.toLowerCase().trim();
+      if (lower.includes('freshm')) return 'Freshman';
+      if (lower.includes('sophom')) return 'Sophomore';
+      if (lower.includes('junior')) return 'Junior';
+      if (lower.includes('senior')) return 'Senior';
+      return rawYear;
+    }
+
     function goHome() {
       selectedYear = 'All';
       selectedSubject = 'All';
+      document.getElementById("home-banner").classList.remove("hidden");
       renderNavigation();
       updateSubjectTabs();
       renderClasses();
@@ -528,6 +537,7 @@
     function selectYear(year) {
       selectedYear = year;
       selectedSubject = 'All';
+      document.getElementById("home-banner").classList.add("hidden");
       renderNavigation();
       updateSubjectTabs();
       renderClasses();
@@ -584,8 +594,8 @@
       }
 
       const yearClasses = allClasses.filter(c => {
-        const itemYear = (c.year || c.subgroup || '').toLowerCase();
-        return itemYear.includes(selectedYear.toLowerCase()) || (selectedYear === 'Freshman' && (itemYear.includes('freshmen') || itemYear.includes('1st')));
+        const itemYearNorm = normalizeYearKey(c.year || c.subgroup || '').toLowerCase();
+        return itemYearNorm === selectedYear.toLowerCase();
       });
       const subjects = [...new Set(yearClasses.map(c => c.subject || 'General'))];
 
@@ -608,16 +618,12 @@
       container.innerHTML = "";
 
       const filtered = allClasses.filter(c => {
-        const itemYear = (c.year || c.subgroup || '').toLowerCase();
+        const itemYearNorm = normalizeYearKey(c.year || c.subgroup || '').toLowerCase();
         const itemSubject = (c.subject || 'General').toLowerCase();
         
         let yearMatch = (selectedYear === 'All');
         if (!yearMatch) {
-          if (selectedYear.toLowerCase() === 'freshman') {
-            yearMatch = itemYear.includes('freshman') || itemYear.includes('freshmen');
-          } else {
-            yearMatch = itemYear.includes(selectedYear.toLowerCase());
-          }
+          yearMatch = itemYearNorm === selectedYear.toLowerCase();
         }
 
         const subjectMatch = selectedSubject === 'All' || itemSubject.includes(selectedSubject.toLowerCase());
@@ -653,8 +659,10 @@
           mediaContent = `<iframe class="w-full h-full absolute top-0 left-0" src="https://www.facebook.com/plugins/video.php?href=${encodedUrl}&show_text=false" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; webkitallowfullscreen; mozallowfullscreen; allowfullscreen" allowfullscreen="true"></iframe>`;
         }
 
-        let displayYear = item.year || item.subgroup || 'Sophomore';
-        let matchedKey = displayYear.toLowerCase().replace(' year', '');
+        let rawYear = item.year || item.subgroup || 'Sophomore';
+        let normalizedYear = normalizeYearKey(rawYear);
+        let matchedKey = normalizedYear.toLowerCase();
+        let displayYear = rawYear;
         if(translations[currentLang][matchedKey]) {
           displayYear = translations[currentLang][matchedKey];
         }
@@ -669,6 +677,19 @@
             ${t('noNotes')}
           </div>
         `;
+
+        // FORMAT DATE TO DD/MM/YYYY (Date - Month - Year format using en-GB locale)
+        let formattedDate = '';
+        if (item.date) {
+          const d = new Date(item.date);
+          if (!isNaN(d)) {
+            formattedDate = d.toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            }); // Produces format like: 06/10/2026
+          }
+        }
 
         card.innerHTML = `
           <div class="relative w-full aspect-video bg-stone-900 overflow-hidden border-b-2 border-stone-300">
@@ -687,7 +708,7 @@
               ${pdfButton}
               <div class="mt-4 pt-3 border-t-2 border-stone-200 flex justify-between items-center text-[11px] text-stone-500 font-semibold">
                 <span>${t('academy')}</span>
-                <span>${item.date ? new Date(item.date).toLocaleDateString() : ''}</span>
+                <span>${formattedDate}</span>
               </div>
             </div>
           </div>
@@ -696,7 +717,6 @@
       });
     }
 
-    // Initialize translations & UI on page load
     applyTranslations();
   </script>
 </body>
