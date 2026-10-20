@@ -18,10 +18,11 @@ app.post('/webhook', async (req, res) => {
     const msg = req.body.message || req.body.channel_post;
     if (!msg) return res.sendStatus(200);
 
-    const text = msg.text || msg.caption || '';
+    // Clean invisible carriage returns (\r) sent by Telegram/mobile keyboards
+    const rawText = (msg.text || msg.caption || '').replace(/\r/g, '');
 
     // 1. DELETE CLASS COMMAND
-    const deleteMatch = text.match(/Delete:\s*(.+)/i);
+    const deleteMatch = rawText.match(/Delete:\s*(.+)/i);
     if (deleteMatch) {
       const targetTitle = deleteMatch[1].trim().toLowerCase();
       const snapshot = await db.collection('classes').get();
@@ -34,11 +35,9 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // 2. EXTRACT AND PARSE ALL CLASS BLOCKS IN THE MESSAGE
-    // Split text by "Year:" to separate individual class entries
-    const blocks = text.split(/(?=Year:\s*)/i);
+    // 2. EXTRACT AND PARSE ALL CLASS BLOCKS
+    const blocks = rawText.split(/(?=Year:\s*)/i);
 
-    // Fetch existing classes once to avoid multiple database queries
     const snapshot = await db.collection('classes').get();
     const existingClassesMap = new Map();
     snapshot.forEach(doc => {
@@ -50,42 +49,48 @@ app.post('/webhook', async (req, res) => {
     for (const block of blocks) {
       if (!block.trim()) continue;
 
-      const titleMatch = block.match(/Title:\s*(.+)/i);
-      const yearMatch = block.match(/Year:\s*(.+)/i);
-      const subjectMatch = block.match(/Subject:\s*(.+)/i);
-      const linkMatch = block.match(/Link:\s*(https?:\/\/[^\s]+)/i);
-      const pdfMatch = block.match(/PDF:\s*(https?:\/\/[^\s]+)/i);
-      const dateMatch = block.match(/Uploaded\s*date:\s*(.+)/i);
+      const titleMatch = block.match(/Title:\s*([^\n]+)/i);
+      const yearMatch = block.match(/Year:\s*([^\n]+)/i);
+      const subjectMatch = block.match(/Subject:\s*([^\n]+)/i);
+      const linkMatch = block.match(/Link:\s*(https?:\/\/[^\s\n]+)/i);
+      const pdfMatch = block.match(/PDF:\s*(https?:\/\/[^\s\n]+)/i);
+      const dateMatch = block.match(/Uploaded\s*date:\s*([^\n]+)/i);
 
       if (titleMatch && linkMatch) {
         const rawTitle = titleMatch[1].trim();
         const normalizedTitle = rawTitle.toLowerCase();
         const existingDoc = existingClassesMap.get(normalizedTitle);
 
+        // Normalize year string (Freshmen -> Freshman)
+        let extractedYear = yearMatch ? yearMatch[1].trim() : "Sophomore";
+        if (extractedYear.toLowerCase().includes("freshm")) extractedYear = "Freshman";
+
+        let classDate = new Date().toISOString();
+        if (dateMatch) {
+          const cleanDateStr = dateMatch[1].trim();
+          const parsed = Date.parse(cleanDateStr);
+          if (!isNaN(parsed)) {
+            classDate = new Date(parsed).toISOString();
+          }
+        }
+
         if (existingDoc) {
           // UPDATE EXISTING CLASS
           const updateData = {};
-          if (yearMatch) updateData.year = yearMatch[1].trim();
+          if (yearMatch) updateData.year = extractedYear;
           if (subjectMatch) updateData.subject = subjectMatch[1].trim();
           if (linkMatch) updateData.url = linkMatch[1].trim();
           if (pdfMatch) updateData.pdfUrl = pdfMatch[1].trim();
-          if (dateMatch) {
-            const parsedDate = Date.parse(dateMatch[1].trim());
-            if (!isNaN(parsedDate)) updateData.date = new Date(parsedDate).toISOString();
-          }
+          if (dateMatch) updateData.date = classDate;
 
           await existingDoc.ref.update(updateData);
           console.log(`Updated class record: ${rawTitle}`);
         } else {
           // CREATE NEW CLASS
           const url = linkMatch[1].trim();
-          const classDate = dateMatch && !isNaN(Date.parse(dateMatch[1].trim())) 
-            ? new Date(dateMatch[1].trim()).toISOString() 
-            : new Date().toISOString();
-
           const classData = {
             title: rawTitle,
-            year: yearMatch ? yearMatch[1].trim() : "Sophomore",
+            year: extractedYear,
             subject: subjectMatch ? subjectMatch[1].trim() : "General",
             url: url,
             pdfUrl: pdfMatch ? pdfMatch[1].trim() : null,
@@ -97,7 +102,6 @@ app.post('/webhook', async (req, res) => {
           };
           
           const docRef = await db.collection('classes').add(classData);
-          // Add to map so subsequent duplicates in the same payload are handled
           existingClassesMap.set(normalizedTitle, { ref: docRef });
           console.log(`Created new class: ${rawTitle}`);
         }
