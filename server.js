@@ -4,7 +4,6 @@ const admin = require('firebase-admin');
 const app = express();
 app.use(express.json());
 
-// Initialize Firebase Admin
 const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -18,7 +17,6 @@ app.post('/webhook', async (req, res) => {
     const msg = req.body.message || req.body.channel_post;
     if (!msg) return res.sendStatus(200);
 
-    // Clean invisible carriage returns (\r) sent by Telegram/mobile keyboards
     const rawText = (msg.text || msg.caption || '').replace(/\r/g, '');
 
     // 1. DELETE CLASS COMMAND
@@ -35,40 +33,47 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // 2. EXTRACT AND PARSE ALL CLASS BLOCKS
-    const blocks = rawText.split(/(?=Year:\s*)/i);
+    // 2. ROBUST SPLIT FOR MULTI-CLASS POSTS
+    const blocks = rawText.split(/(?:\n\s*)*\bYear:\s*/i);
 
     const snapshot = await db.collection('classes').get();
     const existingClassesMap = new Map();
+    
+    snapshot.docChanges().forEach(() => {}); // compatibility
     snapshot.forEach(doc => {
-      if (doc.data().title) {
-        existingClassesMap.set(doc.data().title.trim().toLowerCase(), doc);
+      const data = doc.data();
+      if (data.title && data.url) {
+        // Create a unique composite key: "title|url" to allow same titles with different video links
+        const uniqueKey = `${data.title.trim().toLowerCase()}|${data.url.trim()}`;
+        existingClassesMap.set(uniqueKey, doc);
       }
     });
 
     for (const block of blocks) {
       if (!block.trim()) continue;
 
-      const titleMatch = block.match(/Title:\s*([^\n]+)/i);
-      const yearMatch = block.match(/Year:\s*([^\n]+)/i);
-      const subjectMatch = block.match(/Subject:\s*([^\n]+)/i);
-      const linkMatch = block.match(/Link:\s*(https?:\/\/[^\s\n]+)/i);
-      const pdfMatch = block.match(/PDF:\s*(https?:\/\/[^\s\n]+)/i);
-      const dateMatch = block.match(/Uploaded\s*date:\s*([^\n]+)/i);
+      const fullBlock = "Year: " + block;
+
+      const titleMatch = fullBlock.match(/Title:\s*([^\n]+)/i);
+      const yearMatch = fullBlock.match(/Year:\s*([^\n]+)/i);
+      const subjectMatch = fullBlock.match(/Subject:\s*([^\n]+)/i);
+      const linkMatch = fullBlock.match(/Link:\s*(https?:\/\/[^\s\n]+)/i);
+      const pdfMatch = fullBlock.match(/PDF:\s*(https?:\/\/[^\s\n]+)/i);
+      const dateMatch = fullBlock.match(/Uploaded\s*date:\s*([^\n]+)/i);
 
       if (titleMatch && linkMatch) {
         const rawTitle = titleMatch[1].trim();
-        const normalizedTitle = rawTitle.toLowerCase();
-        const existingDoc = existingClassesMap.get(normalizedTitle);
+        const url = linkMatch[1].trim();
+        const uniqueKey = `${rawTitle.toLowerCase()}|${url}`;
+        const existingDoc = existingClassesMap.get(uniqueKey);
 
-        // Normalize year string (Freshmen -> Freshman)
         let extractedYear = yearMatch ? yearMatch[1].trim() : "Sophomore";
         if (extractedYear.toLowerCase().includes("freshm")) extractedYear = "Freshman";
 
         let classDate = new Date().toISOString();
         if (dateMatch) {
-          const cleanDateStr = dateMatch[1].trim();
-          const parsed = Date.parse(cleanDateStr);
+          const cleanDateStr = dateMatch.id || dateMatch[1].trim();
+          const parsed = Date.parse(dateMatch[1].trim());
           if (!isNaN(parsed)) {
             classDate = new Date(parsed).toISOString();
           }
@@ -79,15 +84,13 @@ app.post('/webhook', async (req, res) => {
           const updateData = {};
           if (yearMatch) updateData.year = extractedYear;
           if (subjectMatch) updateData.subject = subjectMatch[1].trim();
-          if (linkMatch) updateData.url = linkMatch[1].trim();
           if (pdfMatch) updateData.pdfUrl = pdfMatch[1].trim();
           if (dateMatch) updateData.date = classDate;
 
           await existingDoc.ref.update(updateData);
           console.log(`Updated class record: ${rawTitle}`);
         } else {
-          // CREATE NEW CLASS
-          const url = linkMatch[1].trim();
+          // CREATE NEW CLASS (Guarantees unique storage per video link)
           const classData = {
             title: rawTitle,
             year: extractedYear,
@@ -102,8 +105,8 @@ app.post('/webhook', async (req, res) => {
           };
           
           const docRef = await db.collection('classes').add(classData);
-          existingClassesMap.set(normalizedTitle, { ref: docRef });
-          console.log(`Created new class: ${rawTitle}`);
+          existingClassesMap.set(uniqueKey, { ref: docRef });
+          console.log(`Created new class: ${rawTitle} (${url})`);
         }
       }
     }
