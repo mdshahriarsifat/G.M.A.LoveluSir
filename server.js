@@ -1,5 +1,8 @@
 const express = require('express');
 const admin = require('firebase-admin');
+const Parser = require('rss-parser');
+const parser = new Parser();
+const cron = require('node-cron');
 
 const app = express();
 app.use(express.json());
@@ -11,6 +14,152 @@ if (!admin.apps.length) {
   });
 }
 const db = admin.firestore();
+
+// --- HELPER TO SEND FORMATTED MESSAGE TO TELEGRAM ---
+async function sendToTelegramChannel(classData) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) return;
+
+  const messageText = `Year: ${classData.year}
+Subject: ${classData.subject}
+Title: ${classData.title}
+Link: ${classData.url}
+Uploaded date: ${classData.date.split('T')[0]}`;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: messageText
+      })
+    });
+    console.log("Auto-sent parsed class format to Telegram channel.");
+  } catch (err) {
+    console.error("Failed to send message to Telegram:", err);
+  }
+}
+
+// --- GEMINI AI THUMBNAIL ANALYSIS & SMART VERIFICATION ---
+async function analyzeThumbnailWithGemini(thumbnailUrl, fallbackTitle) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { title: fallbackTitle, subject: "General", year: "Sophomore" };
+  }
+
+  try {
+    const imageResponse = await fetch(thumbnailUrl);
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const base64Image = Buffer.from(imageBuffer).toString("base64");
+
+    const prompt = `Analyze this video thumbnail image and the fallback title provided ("${fallbackTitle}"). 
+    Extract and strictly verify academic class details. Ensure title and subject are separated clearly and never repeated, mixed up, or left blank. 
+    Return a strictly formatted JSON object with no markdown formatting (no \`\`\`json):
+    {
+      "title": "Clean, distinct lecture title only",
+      "subject": "Exact academic subject name like Numerical Methods, Linear Algebra, Ordinary Differential Equations, Calculus-2, Abstract Algebra, etc.",
+      "year": "Academic year: must be strictly one of [Freshman, Sophomore, Junior, Senior]"
+    }
+    Rules: 
+    1. Never duplicate the same text into both title and subject.
+    2. If year is missing or ambiguous, default to Sophomore.`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: base64Image
+                }
+              }
+            ]
+          }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    const textResult = data.candidates[0].content.parts[0].text.trim();
+    const cleanJSON = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleanJSON);
+  } catch (err) {
+    console.error("Gemini thumbnail analysis error:", err);
+    return { title: fallbackTitle, subject: "General", year: "Sophomore" };
+  }
+}
+
+// --- YOUTUBE RSS AUTO-POLLING (RUNS ONCE EVERY 24 HOURS) ---
+const YOUTUBE_CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID;
+
+async function checkNewYouTubeVideos() {
+  if (!YOUTUBE_CHANNEL_ID) {
+    console.log("YOUTUBE_CHANNEL_ID not set in environment variables. Skipping auto-check.");
+    return;
+  }
+
+  try {
+    console.log("Running 24-hour scheduled check for new YouTube videos...");
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
+    const feed = await parser.parseURL(feedUrl);
+    
+    const snapshot = await db.collection('classes').get();
+    const existingUrls = new Set();
+    snapshot.forEach(doc => {
+      if (doc.data().url) existingUrls.add(doc.data().url.trim());
+    });
+
+    for (const item of feed.items) {
+      const videoId = item.id.replace('yt:video:', '');
+      const videoLink = item.link;
+      const rawTitle = item.title;
+      const pubDate = item.isoDate || new Date().toISOString();
+
+      if (existingUrls.has(videoLink)) {
+        continue;
+      }
+
+      console.log(`New YouTube video found: ${rawTitle}. Analyzing thumbnail via Gemini AI...`);
+      const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      
+      const parsedData = await analyzeThumbnailWithGemini(thumbnailUrl, rawTitle);
+
+      let extractedYear = parsedData.year || "Sophomore";
+      if (extractedYear.toLowerCase().includes("freshm")) extractedYear = "Freshman";
+
+      const classData = {
+        title: parsedData.title || rawTitle,
+        year: extractedYear,
+        subject: parsedData.subject || "General",
+        url: videoLink,
+        pdfUrl: null,
+        views: 0,
+        date: pubDate,
+        videoType: 'youtube'
+      };
+
+      await db.collection('classes').add(classData);
+      console.log(`[Auto-Sync Success] Saved to Firebase: ${classData.title} | Subject: ${classData.subject}`);
+
+      // Forward formatted message to Telegram channel automatically
+      await sendToTelegramChannel(classData);
+    }
+  } catch (error) {
+    console.error("Error in YouTube auto-polling:", error);
+  }
+}
+
+// Schedule cron job to run ONCE EVERY 24 HOURS (at midnight: 0 0 * * *)
+cron.schedule('0 0 * * *', () => {
+  checkNewYouTubeVideos();
+});
 
 app.post('/webhook', async (req, res) => {
   try {
@@ -39,11 +188,9 @@ app.post('/webhook', async (req, res) => {
     const snapshot = await db.collection('classes').get();
     const existingClassesMap = new Map();
     
-    snapshot.docChanges().forEach(() => {}); // compatibility
     snapshot.forEach(doc => {
       const data = doc.data();
       if (data.title && data.url) {
-        // Create a unique composite key: "title|url" to allow same titles with different video links
         const uniqueKey = `${data.title.trim().toLowerCase()}|${data.url.trim()}`;
         existingClassesMap.set(uniqueKey, doc);
       }
@@ -72,7 +219,6 @@ app.post('/webhook', async (req, res) => {
 
         let classDate = new Date().toISOString();
         if (dateMatch) {
-          const cleanDateStr = dateMatch.id || dateMatch[1].trim();
           const parsed = Date.parse(dateMatch[1].trim());
           if (!isNaN(parsed)) {
             classDate = new Date(parsed).toISOString();
